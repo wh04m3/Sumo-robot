@@ -1,21 +1,18 @@
-
 #include <Bluepad32.h>
 
-#define MOTOR_PWM_PIN  16  // El pin que tú elijas (por ejemplo, GPIO 16)
-#define PWM_CHANNEL    0
+#define ENA  16  // PWM para motor A
+#define ENB  4   // PWM para motor B
+#define PWM_CHANNEL_A  0
+#define PWM_CHANNEL_B  1
 #define PWM_FREQ       5000
 #define PWM_RESOLUTION 8
 
 // PIN CONNECTIONS
-int ledPin = 2;
-int Ypin = 14; // motor 1 speed
-int Bpin = 27; // motor 1 dir1
-int Apin = 26; // motor 1 dir2
-int Xpin = 25; // motor 2 dir1
-int UpYostik = 33; // motor 2 dir2
-int DownYostik = 32; // motor 2 speed
-int LeftYostik = 12;
-int RightYostik = 13;
+
+int IN1 = 33; 
+int IN2 = 32; 
+int IN3 = 12;
+int IN4 = 13;
 
 
 
@@ -92,32 +89,73 @@ void dumpGamepad(ControllerPtr ctl) {
 // == GAME CONTROLLER ACTIONS SECTION == //
 
 void processGamepad(ControllerPtr ctl) {
+  
 
 
   //== LEFT JOYSTICK DEADZONE ==//
-  if (ctl->axisY() > -25 && ctl->axisY() < 25 && ctl->axisX() > -25 && ctl->axisX() < 25) {
+  if (ctl->axisY() > -25 && ctl->axisY() < 25 && ctl->axisRY() > -25 && ctl->axisRY() < 25) {
     // keep motors off
     // analogWrite(ENApin,0);
     // analogWrite(ENBpin, 0);
      Serial.printf("Esta en la deadzone :)\n");
-     ledcWrite(PWM_CHANNEL, 0);
+     ledcWrite(PWM_CHANNEL_A, 0);
+     ledcWrite(PWM_CHANNEL_B, 0);
 
-    // digitalWrite(RightYostik, LOW);
-    // digitalWrite(LeftYostik, LOW);
-    // digitalWrite(DownYostik, LOW);
-    // digitalWrite(UpYostik, LOW);
+
+    digitalWrite(IN1, LOW);
+    digitalWrite(IN2, LOW);
+    digitalWrite(IN3, LOW);
+    digitalWrite(IN4, LOW);
   }else{
 
      Serial.printf("No esta en la deadzone <:\n");
      
-     
+     //Velocidad para Jostik izquierdo
      float eje = (float)ctl->axisY();   // Convertir a flotante
-    float velocidad = eje * 0.498;     // Resultado será flotante
+    float velocidad = abs(eje) * 0.498;     // Resultado será flotante
     int valorEntero = (int)velocidad;
     Serial.print(valorEntero);
-    ledcWrite(PWM_CHANNEL, valorEntero); // Salida PWM
+    ledcWrite(PWM_CHANNEL_A, valorEntero); // Salida PWM
+
+
+
+    //Velocidad para Jostik derecho
+
+    float eje2 = (float)ctl->axisRY();   // Convertir a flotante
+    float velocidad2 = abs(eje2) * 0.498;     // Resultado será flotante
+    int valorEntero2 = (int)velocidad2;
+    Serial.print(valorEntero2);
+    ledcWrite(PWM_CHANNEL_B, valorEntero2); // Salida PWM
+
+
+    if(ctl->axisY()>25){
+      //atras llata izquierda
+      digitalWrite(IN1, HIGH);
+      digitalWrite(IN2, LOW);
+
+    }else {
+      //delante llanta izquierda
+      digitalWrite(IN1, LOW);
+      digitalWrite(IN2, HIGH);
+
+
+    }
+
+     if(ctl->axisRY()>25){
+      //atras llata derecha
+      digitalWrite(IN3, LOW);
+      digitalWrite(IN4, HIGH);
+
+    }else {
+      //delante llanta derecha
+      digitalWrite(IN3, HIGH);
+      digitalWrite(IN4, LOW);
+      
+
+    }
 
   }
+
 }
 
 void processControllers() {
@@ -135,15 +173,11 @@ void processControllers() {
 
 // Arduino setup function. Runs in CPU 1
 void setup() {
-  pinMode(ledPin, OUTPUT);
-  pinMode(Ypin, OUTPUT);
-  pinMode(Bpin, OUTPUT);
-  pinMode(Apin, OUTPUT);
-  pinMode(Xpin, OUTPUT);
-  pinMode(UpYostik, OUTPUT);
-  pinMode(DownYostik, OUTPUT);
-  pinMode(LeftYostik, OUTPUT);
-  pinMode(RightYostik, OUTPUT);
+  
+  pinMode(IN1, OUTPUT);
+  pinMode(IN2, OUTPUT);
+  pinMode(IN3, OUTPUT);
+  pinMode(IN4, OUTPUT);
 
 
 
@@ -155,8 +189,12 @@ void setup() {
   const uint8_t* addr = BP32.localBdAddress();
   Serial.printf("BD Addr: %2X:%2X:%2X:%2X:%2X:%2X\n", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
 
-    ledcSetup(PWM_CHANNEL, PWM_FREQ, PWM_RESOLUTION); // Canal 0, 5kHz, 8 bits
-  ledcAttachPin(MOTOR_PWM_PIN, PWM_CHANNEL);    
+    // Configurar PWM con LEDC
+  ledcSetup(PWM_CHANNEL_A, PWM_FREQ, PWM_RESOLUTION);
+  ledcAttachPin(ENA, PWM_CHANNEL_A);
+
+  ledcSetup(PWM_CHANNEL_B, PWM_FREQ, PWM_RESOLUTION);
+  ledcAttachPin(ENB, PWM_CHANNEL_B);
 
 
 
@@ -193,5 +231,5 @@ void loop() {
   // https://stackoverflow.com/questions/66278271/task-watchdog-got-triggered-the-tasks-did-not-reset-the-watchdog-in-time
 
   //     vTaskDelay(1);
-  delay(150);
+  // delay(150);
 }
